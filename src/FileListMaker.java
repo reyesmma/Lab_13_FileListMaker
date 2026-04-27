@@ -1,13 +1,10 @@
 import javax.swing.*;
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-
-import static java.nio.file.StandardOpenOption.CREATE;
 
 public class FileListMaker
 {
@@ -16,30 +13,30 @@ public class FileListMaker
     static BufferedReader inFile;
     static PrintWriter outFile;
     static String curFileName = "";
-    static boolean running = true;          // controls execution via Q command
-    static boolean hasAFile = false;        // changes after a file is loaded
-    static boolean newUnsavedFile = false;  // when the user begins creating a new list
-    static boolean fileSaveFlag = false;    // tracks if file needs to be saved.
+    static boolean done = false;
+    static boolean hasAFile = false;
+    static boolean newUnsavedFile = false;
+    static boolean needsToBeSaved = false;    // tracks if file needs to be saved.
 
     public static void main(String[] args)
     {
         String itemToAdd;
         int indexToInsert;
         int indexToDelete;
-        boolean done = false;
         String cmdRegEx = "[AaDdIiVvQqMmOoSsCc]";
         String cmd;
+        showMenu();
 
         do{
-            showMenu();
+
             cmd = SafeInput.getRegExString(in, "Enter a command (A, D, I, V, Q, M, O, S, C)", cmdRegEx);
 
             try
             {
                 switch (cmd.toUpperCase()) {
                     case "O":
-                        if (newUnsavedFile || fileSaveFlag) {
-                            String prompt = "Are you sure? You have an unsaved file!\n Opening a new file will replace your existing list.";
+                        if (newUnsavedFile || needsToBeSaved) {
+                            String prompt = "Are you sure? Opening a new file will replace your existing list.";
                             boolean burnFileYN = SafeInput.getYNConfirm(in, prompt);
                             if (burnFileYN) {
                                 openFile();
@@ -55,18 +52,18 @@ public class FileListMaker
                         itemToAdd = SafeInput.getNonZeroLenString(in, "Enter an item to add to the list");
                         list.add(itemToAdd);
                         showList(list);
-                        fileSaveFlag = true;
+                        needsToBeSaved = true;
                         break;
                     case "C":   // Clears the list in memory
-                        if (!fileSaveFlag && !newUnsavedFile) {
+                        if (!needsToBeSaved && !newUnsavedFile) {
                             list.clear();
-                            hasAFile = newUnsavedFile = fileSaveFlag = false;
+                            hasAFile = newUnsavedFile = needsToBeSaved = false;
                         } else // Confirm user wants to clear unsaved list
                         {
                             boolean clearFileYN = SafeInput.getYNConfirm(in, "Are you sure you want to clear this list without saving? :");
                             if (clearFileYN) {
                                 list.clear();
-                                hasAFile = newUnsavedFile = fileSaveFlag = false;
+                                hasAFile = newUnsavedFile = needsToBeSaved = false;
                             }
                         }
                         break;
@@ -74,7 +71,7 @@ public class FileListMaker
                         if (list.size() > 0) {
                             indexToDelete = SafeInput.getRangedInt(in, "Enter the # of the item to delete", 1, list.size());
                             list.remove(indexToDelete - 1);
-                            fileSaveFlag = true;
+                            needsToBeSaved = true;
                             showList(list);
                         } else {
                             System.out.println("List is empty");
@@ -97,7 +94,7 @@ public class FileListMaker
                         break;
                     case "S":
                         saveFile();
-                        fileSaveFlag = false;
+                        needsToBeSaved = false;
                         newUnsavedFile = false;
                         hasAFile = true;
                         break;
@@ -119,14 +116,14 @@ public class FileListMaker
                             }
 
                             showList(list);
-                            fileSaveFlag = true;
+                            needsToBeSaved = true;
                         } else {
                             System.out.println("List is empty");
                             showList(list);
                         }
                         break;
                     case "Q":
-                        if (fileSaveFlag || newUnsavedFile)
+                        if (needsToBeSaved || newUnsavedFile)
                         {
                             if(SafeInput.getYNConfirm(in, "Save your list before quitting? You will lose it!"))
                             {
